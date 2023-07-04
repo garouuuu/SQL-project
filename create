@@ -1,0 +1,387 @@
+DROP DATABASE IF EXISTS moviesondemand;
+CREATE DATABASE moviesondemand;
+USE moviesondemand;
+
+CREATE TABLE actor (
+  actor_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  first_name VARCHAR(45) NOT NULL,
+  last_name VARCHAR(45) NOT NULL,
+  PRIMARY KEY (actor_id)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE actor ALTER first_name SET DEFAULT 'unknown';
+ALTER TABLE actor ALTER last_name SET DEFAULT 'unknown';
+
+CREATE TABLE country (
+  country_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  country VARCHAR(50) NOT NULL,
+  PRIMARY KEY  (country_id)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE city (
+  city_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  city VARCHAR(50) NOT NULL,
+  country_id SMALLINT UNSIGNED NOT NULL,
+  PRIMARY KEY  (city_id),
+  CONSTRAINT `fk_city_country` FOREIGN KEY (country_id) REFERENCES country (country_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE address (
+  address_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  address VARCHAR(50) NOT NULL,
+  district VARCHAR(20) DEFAULT NULL,
+  city_id SMALLINT UNSIGNED NOT NULL,
+  postal_code VARCHAR(10) DEFAULT NULL,
+  phone VARCHAR(20) NOT NULL,
+  PRIMARY KEY  (address_id),
+  CONSTRAINT `fk_address_city` FOREIGN KEY (city_id) REFERENCES city (city_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE category (
+  category_id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(25) NOT NULL,
+  PRIMARY KEY  (category_id)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE language (
+  language_id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name CHAR(20) NOT NULL,
+  PRIMARY KEY (language_id)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE customer (
+  customer_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  first_name VARCHAR(45) NOT NULL,
+  last_name VARCHAR(45) NOT NULL,
+  email VARCHAR(50) DEFAULT NULL,
+  address_id SMALLINT UNSIGNED NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  create_date DATETIME DEFAULT CURRENT_TIMESTAMP() NOT NULL,
+  PRIMARY KEY  (customer_id),
+  CONSTRAINT fk_customer_address FOREIGN KEY (address_id) REFERENCES address (address_id) ON DELETE CASCADE ON UPDATE CASCADE
+  )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE customer ALTER first_name SET DEFAULT 'unknown';
+ALTER TABLE customer ALTER last_name SET DEFAULT 'unknown';
+ALTER TABLE customer ADD user_id SMALLINT UNSIGNED; 
+ALTER TABLE customer ADD action_id SMALLINT UNSIGNED;
+ALTER TABLE customer ADD subscription_id SMALLINT UNSIGNED;
+
+ALTER TABLE customer
+ADD CONSTRAINT customer_user_id
+FOREIGN KEY(user_id) REFERENCES user(user_id)
+ON DELETE /*SET NULL*/ CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE customer
+ADD CONSTRAINT customer_action_id
+FOREIGN KEY(action_id) REFERENCES log(action_id)
+ON DELETE /*SET NULL*/CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE customer
+ADD CONSTRAINT customer_subscription_id
+FOREIGN KEY(subscription_id) REFERENCES subscription(subscription_id)
+ON DELETE /*SET NULL*/ CASCADE ON UPDATE CASCADE;
+
+
+
+CREATE TABLE film (
+  film_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  title VARCHAR(128) NOT NULL,
+  description TEXT DEFAULT NULL,
+  release_year YEAR DEFAULT NULL,
+  language_id TINYINT UNSIGNED NOT NULL,
+  original_language_id TINYINT UNSIGNED DEFAULT NULL,
+  length SMALLINT UNSIGNED DEFAULT NULL,
+  rating ENUM('G','PG','PG-13','R','NC-17') DEFAULT 'G',
+  special_features SET('Trailers','Commentaries','Deleted Scenes','Behind the Scenes') DEFAULT NULL,
+  PRIMARY KEY  (film_id),
+  CONSTRAINT fk_film_language FOREIGN KEY (language_id) REFERENCES language (language_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_film_language_original FOREIGN KEY (original_language_id) REFERENCES language (language_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE film ALTER title SET DEFAULT 'no title';
+
+
+
+CREATE TABLE film_actor (
+  actor_id SMALLINT UNSIGNED NOT NULL,
+  film_id SMALLINT UNSIGNED NOT NULL,
+  PRIMARY KEY  (actor_id,film_id),
+  CONSTRAINT fk_film_actor_actor FOREIGN KEY (actor_id) REFERENCES actor (actor_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_film_actor_film FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE film_category (
+  film_id SMALLINT UNSIGNED NOT NULL,
+  category_id TINYINT UNSIGNED NOT NULL,
+  PRIMARY KEY (film_id, category_id),
+  CONSTRAINT fk_film_category_film FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_film_category_category FOREIGN KEY (category_id) REFERENCES category (category_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE film_inventory(
+  film_inventory_id MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  film_id SMALLINT UNSIGNED NOT NULL,
+  PRIMARY KEY  (film_inventory_id),
+  CONSTRAINT fk_inventory_film FOREIGN KEY (film_id) REFERENCES film (film_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE series_inventory (
+  series_inventory_id MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  series_id SMALLINT UNSIGNED NOT NULL,
+  PRIMARY KEY  (series_inventory_id),
+  CONSTRAINT fk_inventory_series FOREIGN KEY (series_id) REFERENCES series (series_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE film_rental(
+film_rental_id INT NOT NULL AUTO_INCREMENT,
+film_inventory_id MEDIUMINT UNSIGNED NOT NULL,
+film_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+customer_id SMALLINT UNSIGNED NOT NULL,
+PRIMARY KEY(film_rental_id),
+UNIQUE KEY(film_rental_date, film_inventory_id, customer_id),
+CONSTRAINT fk_movie_rental_inventory FOREIGN KEY(film_inventory_id) REFERENCES film_inventory(film_inventory_id) ON DELETE CASCADE ON UPDATE CASCADE,
+CONSTRAINT fk_movie_rental_customer FOREIGN KEY(customer_id) REFERENCES customer(customer_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE series_rental(
+series_rental_id INT NOT NULL AUTO_INCREMENT,
+series_inventory_id MEDIUMINT UNSIGNED NOT NULL,
+season_rental_id INT NOT NULL,
+episode_rental_id INT NOT NULL,
+series_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+season_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+episode_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+customer_id SMALLINT UNSIGNED NOT NULL,
+PRIMARY KEY(series_rental_id),
+UNIQUE KEY(series_rental_date, season_rental_date, episode_rental_date, series_inventory_id, customer_id),
+CONSTRAINT fk_series_rental_inventory FOREIGN KEY(series_inventory_id) REFERENCES series_inventory(series_inventory_id) ON DELETE CASCADE ON UPDATE CASCADE,
+CONSTRAINT fk_series_rental_customer FOREIGN KEY(customer_id) REFERENCES customer(customer_id) ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE both_rental(
+both_rental_id INT NOT NULL AUTO_INCREMENT,
+film_rental_id INT NOT NULL,
+series_rental_id INT NOT NULL,
+film_inventory_id MEDIUMINT UNSIGNED NOT NULL,
+series_inventory_id MEDIUMINT UNSIGNED NOT NULL,
+film_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+customer_id SMALLINT UNSIGNED NOT NULL,
+series_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+season_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+episode_rental_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+PRIMARY KEY(both_rental_id),
+UNIQUE KEY(both_rental_id, film_rental_id, series_rental_id),
+CONSTRAINT fk_both_rental_film_inventory
+FOREIGN KEY(film_inventory_id) REFERENCES film_inventory(film_inventory_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+CONSTRAINT fk_both_rental_series_inventory
+FOREIGN KEY(series_inventory_id) REFERENCES series_inventory(series_inventory_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+CONSTRAINT fk_both_customer
+FOREIGN KEY(customer_id) REFERENCES customer(customer_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+CONSTRAINT fk_both_film_rental
+FOREIGN KEY(film_rental_id) REFERENCES film_rental(film_rental_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+CONSTRAINT fk_both_series_rental
+FOREIGN KEY(series_rental_id) REFERENCES series_rental(series_rental_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE payment(
+  payment_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  customer_id SMALLINT UNSIGNED NOT NULL,
+  amount DECIMAL(5,2) NOT NULL DEFAULT '0.0',
+  payment_date DATETIME NOT NULL,
+    /*num_of_movies INT DEFAULT '0'
+    num_of_episodes INT DEFAULT '0'*/
+  movie_rental_id INT,
+  series_rental_id INT,
+  both_rental_id INT,
+  movies_subscription_cost DECIMAL(5,2) DEFAULT '0.4' NOT NULL,
+  shows_subscription_cost DECIMAL(5,2) DEFAULT '0.2' NOT NULL,
+  both_movies_subscription_cost DECIMAL(5,2) DEFAULT '0.3' NOT NULL,
+  both_shows_subscription_cost DECIMAL(5,2) DEFAULT '0.1' NOT NULL,
+  subscription_id SMALLINT UNSIGNED,
+  PRIMARY KEY  (payment_id),
+  CONSTRAINT fk_payment_customer
+  FOREIGN KEY (customer_id) REFERENCES customer (customer_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT payment_cost
+  FOREIGN KEY(subscription_id) REFERENCES subscription(subscription_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT movie_rental_id
+  FOREIGN KEY(movie_rental_id) REFERENCES film_rental(film_rental_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT serie_rental_id
+  FOREIGN KEY(series_rental_id) REFERENCES series_rental(series_rental_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT movie_serie_rental_id
+  FOREIGN KEY(both_rental_id) REFERENCES both_rental(both_rental_id)
+  ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE employee(
+  user_id SMALLINT UNSIGNED,
+  action_id SMALLINT UNSIGNED NOT NULL,
+  employee_name VARCHAR(45) DEFAULT 'unknown' NOT NULL,
+  employee_last_name VARCHAR(45) DEFAULT 'unknown' NOT NULL,
+  employee_email VARCHAR(50) DEFAULT NULL,
+  PRIMARY KEY(user_id, action_id),
+  CONSTRAINT employee_id
+  FOREIGN KEY(user_id) REFERENCES user(user_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT employee_action
+  FOREIGN KEY(action_id) REFERENCES log(action_id)
+  ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE administrator(
+  user_id SMALLINT UNSIGNED,
+  action_id SMALLINT UNSIGNED NOT NULL,
+  administrator_name VARCHAR(45) DEFAULT 'unknown' NOT NULL,
+  administrator_last_name VARCHAR(45) DEFAULT 'unknown' NOT NULL,
+  administrator_email VARCHAR(50) DEFAULT NULL,
+  PRIMARY KEY(user_id, action_id),
+  CONSTRAINT administrator_id
+  FOREIGN KEY(user_id) REFERENCES user(user_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT administrator_action
+  FOREIGN KEY(action_id) REFERENCES log(action_id)
+  ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE series(
+  series_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  title VARCHAR(128) DEFAULT 'unknown' NOT NULL,
+  season_title VARCHAR(128) DEFAULT 'unknown' NOT NULL,
+  episode_title VARCHAR(128) DEFAULT 'unknown' NOT NULL,
+  description TEXT DEFAULT 'no description',
+  release_year YEAR DEFAULT '0000',
+  rating ENUM('G', 'PG', 'PG-13', 'R', 'NC-17') DEFAULT 'G',
+  special_features SET('Trailers', 'Commentaries', 'Deleted scenes', 'Behind the scenes') DEFAULT 'Trailers',
+  season_count TINYINT UNSIGNED DEFAULT NULL,
+  episode_count TINYINT UNSIGNED DEFAULT NULL,
+  episode_length TINYINT UNSIGNED DEFAULT NULL,
+  language_id TINYINT UNSIGNED DEFAULT NULL,
+  original_language_id TINYINT UNSIGNED DEFAULT NULL,
+  continuation ENUM('NO', 'YES'),
+  PRIMARY KEY(series_id),
+  CONSTRAINT series_language
+  FOREIGN KEY(language_id) REFERENCES language(language_id)
+  ON DELETE /*SET NULL*/CASCADE ON UPDATE CASCADE,
+  CONSTRAINT series_language_original
+  FOREIGN KEY(original_language_id) REFERENCES language(language_id)
+  ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE series_actor(
+  actor_id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  series_id SMALLINT UNSIGNED NOT NULL,
+  PRIMARY KEY(actor_id, series_id),
+  CONSTRAINT series_actor_id
+  FOREIGN KEY(actor_id) REFERENCES actor(actor_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT series_actor_series
+  FOREIGN KEY(series_id) REFERENCES series(series_id)
+  ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE series_category(
+  series_id SMALLINT UNSIGNED,
+  category_id TINYINT UNSIGNED,
+  PRIMARY KEY(category_id, series_id),
+  CONSTRAINT series_category_show
+  FOREIGN KEY(series_id) REFERENCES series(series_id)
+  ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT series_category_category
+  FOREIGN KEY(category_id) REFERENCES category(category_id)
+  ON DELETE CASCADE ON UPDATE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE subscription(
+  subscription_id SMALLINT UNSIGNED NOT NULL,
+  subscription_type ENUM('movies', 'shows', 'both'),
+  movies_subscription_cost DECIMAL(5,2) DEFAULT '0.4' NOT NULL,
+  shows_subscription_cost DECIMAL(5,2) DEFAULT '0.2' NOT NULL,
+  both_subscription_cost DECIMAL(5,2) DEFAULT '0.4' NOT NULL,
+  subscription_date DATETIME DEFAULT CURRENT_TIMESTAMP() NOT NULL,
+  PRIMARY KEY(subscription_id)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE user(
+  user_id SMALLINT UNSIGNED,
+  user_type ENUM('customer', 'employee', 'administrator'),
+  username VARCHAR(45) NOT NULL,
+  PRIMARY KEY(user_id)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+CREATE TABLE log(
+  action_id SMALLINT UNSIGNED NOT NULL,
+  action_type SET('INSERT', 'DELETE', 'UPDATE'),
+  username VARCHAR(45) NOT NULL,
+  user_last_name VARCHAR(45) DEFAULT 'unknown' NOT NULL,
+  action_date DATETIME DEFAULT CURRENT_TIMESTAMP() NOT NULL,
+  action_success ENUM('YES', 'NO'),
+  used_table_names ENUM('actor', 'address', 'administrator', 'category', 'city', 'country', 'customer', 'employee', 'film', 'film_actor', 'film_category', 'inventory', 'language', 'log', 'payment', 'rental', 'series', 'series_actor', 'series_category', 'subscription', 'user'),
+  PRIMARY KEY(action_id)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+/*Σειρά δημιουργίας των πινάκων στη βάση:
+actor
+ALTER actor
+country
+city
+address
+category
+language
+customer
+film
+ALTER film
+film_actor
+film_category
+film_inventory
+film_rental
+series
+series_actor
+series_category
+series_inventory
+series_rental
+both_rental
+subscription
+user
+log
+employee
+administrator
+ALTER customer
+payment*/
